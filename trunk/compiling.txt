@@ -1,0 +1,54 @@
+HOWTO compile the Unofficial Cataclysm UI Toolkit by Jamash (Kil'jaeden-US)
+
+### STEP ONE ###
+
+Download and install the required tools and libraries
+
+# MSYS (32-bit) from http://www.mingw.org/wiki/MSYS
+# Mingw-w64 (32-bit) from http://sourceforge.net/projects/mingw-w64/
+# Cygwin from http://cygwin.com/
+
+Cygwin is only used for upx, zip and unzip.  If you don't need those, you can omit it.
+A bit of Makefile editing is required to remove the references to these utilities.
+
+# Strawberry Perl (32-bit) from http://strawberryperl.com/
+# PAR-Packer from CPAN
+
+Once you have Strawberry Perl installed, go to a windows command prompt and type
+
+cpanp install PAR-Packer
+
+# StormLib (Beta) from http://www.zezula.net/en/mpq/stormlib.html
+
+You can use the 64-bit versions of MSYS, Mingw-w64 and Strawberry Perl if you have
+a 64-bit OS.
+
+### STEP TWO ###
+
+Put extract.pl, Makefile, stormlib.diff and mpq.cpp in a directory of your choice,
+henceforth "DIRECTORY".
+
+### STEP THREE ###
+
+Unzip stormlib_beta.zip into DIRECTORY, so that it resides in DIRECTORY\StormLib
+
+### STEP FOUR ###
+
+Edit the Makefile to point to the correct program locations.
+
+### STEP FIVE ###
+
+open an MSYS terminal and type the following commands
+
+cd DIRECTORY
+make patch
+make
+
+### STEP SIX ###
+
+If all goes well, you should have a working set of executables!
+
+Make sure you've put the correct paths in the Makefile and then type
+
+make install
+make test

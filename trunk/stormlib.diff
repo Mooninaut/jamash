@@ -1,0 +1,38 @@
+diff -u -r old/StormLib/makefile.w32 new/StormLib/makefile.w32
+--- old/StormLib/makefile.w32	2010-10-03 21:19:16 -0400
++++ new/StormLib/makefile.w32	2010-10-03 21:18:12 -0400
+@@ -8,15 +8,17 @@
+ #    
+ #####################################################################
+ 
+-PATH   = C:\TOOLS32\MINGW\bin
+-CPP    = g++
+-CC     = gcc
+-CFLAGS = -Wall
++#PATH   = C:\TOOLS32\MINGW\bin
++MINGW = i686-w64-mingw32-
++#MINGW = x86_64-w64-mingw32-
++CPP    = $(MINGW)g++
++CC     = $(MINGW)gcc
++CFLAGS = -Wall -O
+ DFLAGS = -D_7ZIP_ST
+ LFLAGS = -shared
+ #LFLAGS = -lbz2 -lz
+-AR     = ar
+-ARFLAGS= rcs
++AR     = $(MINGW)ar
++ARFLAGS= $(MINGW)rcs
+ 
+ LIBRARY  = StormLib.dll
+ #LIBRARY  = StormLib.lib
+@@ -246,8 +248,8 @@
+ 
+ all: $(LIBRARY)
+ 
+-#clean:
+-#   rm -f $(OBJS) $(LIBRARY)
++clean:
++	rm -f $(OBJS_C) $(OBJS_CPP) $(LIBRARY)
+ 
+ #install: $(LIBRARY)
+ #   install $(LIBRARY) /usr/local/lib
