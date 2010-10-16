@@ -11,6 +11,8 @@
 
 # This makefile is intended to be run using MSYS make
 
+VERSION = 1.01
+
 CYGWIN=/c/cygwin/bin
 CONSOLE=/bin/cmd
 STRAWBERRY = /c/strawberry32/perl
@@ -25,7 +27,8 @@ EXEFILES = $(STORMLIB_DLL) mpq.exe extract.exe extract-art.bat extract-code.bat
 OTHERFILES = readme.txt
 SRCFILES = Makefile stormlib.diff mpq.cpp extract.pl gpl.txt compiling.txt
 ARCHIVE = Cata-UI-Toolkit
-ZIPFILE = $(ARCHIVE).zip
+
+ZIPFILE = $(ARCHIVE)-$(VERSION).zip
 
 TOOLPREFIX = i686-w64-mingw32-
 
@@ -35,6 +38,8 @@ CFLAGS = --static -O
 
 BETADIR = /d/Games/World of Warcraft Beta
 PTRDIR = /d/Games/World of Warcraft Public Test
+LIVEDIR = /d/Games/World of Warcraft
+
 
 .PHONY: clean realclean stormclean all install test patch
 
@@ -44,42 +49,49 @@ patch: stormlib.diff
 	patch -u -b -p1 -z.prepatch -i stormlib.diff
 
 mpq.exe: $(STORMLIB_DLL) mpq.cpp
-	$(G++) $(CFLAGS) $^ -o $@
-	$(STRIP) $@
-	$(CYGWIN)/chmod 0755 $@
-	$(CYGWIN)/upx -9 $@
+	"$(G++)" $(CFLAGS) $^ -o $@
+	"$(STRIP)" $@
+	"$(CYGWIN)/chmod" 0755 $@
+	"$(CYGWIN)/upx" -9 $@
 
 extract.exe: extract.pl
-	$(PERL) $(PP) $^ -o $@
+	"$(PERL)" -c $^ && "$(PERL)" "$(PP)" $^ -o $@
 	
 $(STORMLIB_DLL):
-	cd $(STORMLIB_DIR); make -f $(STORMLIB_MAKEFILE)
-	$(CYGWIN)/chmod 0755 $@
-	$(CYGWIN)/upx -9 $@
+	cd "$(STORMLIB_DIR)"; make -f "$(STORMLIB_MAKEFILE)"
+	"$(CYGWIN)/chmod" 0755 $@
+	"$(CYGWIN)/upx" -9 $@
 
 realclean: clean stormclean
 
 clean:
-	rm -rf mpq.exe extract.exe $(ARCHIVE) $(ZIPFILE)
+	rm -rf mpq.exe extract.exe "$(ARCHIVE)" "$(ZIPFILE)"
 
 stormclean:
-	cd $(STORMLIB_DIR); make -f $(STORMLIB_MAKEFILE) clean
+	cd "$(STORMLIB_DIR)"; make -f "$(STORMLIB_MAKEFILE)" clean
 
 $(ZIPFILE): $(EXEFILES) $(SRCFILES) $(OTHERFILES)
-	rm -rf $(ARCHIVE) $(ZIPFILE)
-	$(CYGWIN)/chmod 0755 $(EXEFILES)
-	$(CYGWIN)/chmod 0644 $(SRCFILES) $(OTHERFILES)
-	mkdir $(ARCHIVE)
+	rm -rf "$(ARCHIVE)" "$(ZIPFILE)"
+	"$(CYGWIN)/chmod" 0755 $(EXEFILES)
+	"$(CYGWIN)/chmod" 0644 $(SRCFILES) $(OTHERFILES)
+	mkdir "$(ARCHIVE)"
 	cp $(EXEFILES) $(OTHERFILES) $(ARCHIVE)
-	mkdir $(ARCHIVE)/source
-	cp $(SRCFILES) $(ARCHIVE)/source
-	$(CYGWIN)/zip -9 -r $(ZIPFILE) $(ARCHIVE)
+	mkdir "$(ARCHIVE)/source"
+	cp $(SRCFILES) "$(ARCHIVE)/source"
+	"$(CYGWIN)/zip" -9 -r "$(ZIPFILE)" "$(ARCHIVE)"
 
 install: $(ZIPFILE)
-	rm -rf "$(BETADIR)/$(ARCHIVE)" "$(PTRDIR)/$(ARCHIVE)"
-	$(CYGWIN)/unzip $(ZIPFILE) -d "$(BETADIR)"
-	$(CYGWIN)/unzip $(ZIPFILE) -d "$(PTRDIR)"
+	rm -rf "$(LIVEDIR)/$(ARCHIVE)/"* "$(BETADIR)/$(ARCHIVE)"/* "$(PTRDIR)/$(ARCHIVE)"/*
+	"$(CYGWIN)/unzip" "$(ZIPFILE)" -d "$(BETADIR)"
+	"$(CYGWIN)/unzip" "$(ZIPFILE)" -d "$(PTRDIR)"
+	"$(CYGWIN)/unzip" "$(ZIPFILE)" -d "$(LIVEDIR)"
 
-test:
+code:
 	cd "$(BETADIR)/$(ARCHIVE)"; $(CONSOLE) /Cextract-code.bat
 	cd "$(PTRDIR)/$(ARCHIVE)"; $(CONSOLE) /Cextract-code.bat
+	cd "$(LIVEDIR)/$(ARCHIVE)"; $(CONSOLE) /Cextract-code.bat
+
+art:
+	cd "$(BETADIR)/$(ARCHIVE)"; $(CONSOLE) /Cextract-art.bat
+	cd "$(PTRDIR)/$(ARCHIVE)"; $(CONSOLE) /Cextract-art.bat
+	cd "$(LIVEDIR)/$(ARCHIVE)"; $(CONSOLE) /Cextract-art.bat

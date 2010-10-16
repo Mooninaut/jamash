@@ -1,6 +1,8 @@
 #include "StormLib/src/StormLib.h"
 #include <iostream>
 #include <string>
+#include <vector>
+#include <sys/stat.h>
 
 // mpq.cpp - Uses StormLib to extract UI code / art from
 // World of Warcraft versions 4.0+
@@ -28,19 +30,30 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 // VERSION 1.0 2010-OCT-03 Clement Cherlin
-
+/*
 const char * const suffixes[] = { ".toc", ".lua", ".xml", ".xsd" };
 const int suffixCount = 4;
 const char * const prefixes[] = { "Interface\\FrameXML\\", "Interface\\AddOns\\" };
 const int prefixCount = 2;
-const int bufferSize = 1024;
 
+const char art[] = "Interface\\*.blp";
+*/
+using namespace std;
+
+const string Locale("locale=");
+const string Command("command=");
+const string Mpq("mpq=");
+const string Prefix("prefix=");
+const string Suffix("suffix=");
+const string Base("base=");
+
+const int bufferSize = 1024;
+/*
 const int commandIndex = 1;
 const int localeIndex = 2;
 const int baseIndex = 3;
 const int patchIndex = 4;
-
-const char art[] = "Interface\\*.blp";
+*/
 
 long printMPQMatches(HANDLE mpq, const char *glob) {
   SFILE_FIND_DATA found;
@@ -52,13 +65,39 @@ long printMPQMatches(HANDLE mpq, const char *glob) {
   }
   while (result) {
     count++;
-    std::cout << found.cFileName << std::endl;
-  result = SListFileFindNextFile(listHandle, &found);
+    cout << found.cFileName << endl;
+    result = SListFileFindNextFile(listHandle, &found);
   }
   SListFileFindClose(listHandle);
   return count;
 }
+bool FileExists(const char * fileName) {
+  struct stat stFileInfo;
+  bool exists;
+  int intStat;
 
+  // Attempt to get the file attributes
+  intStat = stat(fileName,&stFileInfo);
+  if(intStat == 0) {
+    // We were able to get the file attributes
+    // so the file obviously exists.
+    exists = true;
+  } else {
+    // We were not able to get the file attributes.
+    // This may mean that we don't have permission to
+    // access the folder which contains this file. If you
+    // need to do that level of checking, lookup the
+    // return values of stat which will give you
+    // more details on why stat failed.
+    exists = false;
+  }
+  
+  return(exists);
+}
+// is str1 a prefix of str2?
+bool isPrefix(const string str1, const string str2) {
+  return(str2.compare(0, str1.length(), str1) ? false : true);
+}
 int main(int argc, const char *argv[]) {
   // SFileOpenArchive(const char * szMpqName, DWORD dwPriority, DWORD dwFlags, HANDLE * phMpq);
   // argv[0] executable name
@@ -69,63 +108,117 @@ int main(int argc, const char *argv[]) {
   HANDLE mpqHandle;
   bool result;
   char buffer[bufferSize];
-  std::cerr << "Opening base MPQ " << argv[baseIndex] << " for reading." << std::endl;
+  vector<string> mpqStr;
+  vector<string> prefixStr;
+  vector<string> suffixStr;
+  string localeStr("enUS");
+  string commandStr("list");
+  string baseStr("");
+  vector<string>::iterator it1;
+  vector<string>::iterator it2;
+  for (int arg = 1; arg < argc; arg++) {
+    string s(argv[arg]);
+#define GETIT(str, var) \
+    if (isPrefix(str, s)) { \
+      var = s; \
+      var.erase(0, str.length()); \
+    }
+    GETIT(Command, commandStr)
+    else
+    GETIT(Locale, localeStr)
+    else
+    GETIT(Base, baseStr)
+#undef GETIT
+#define GETIT(str,vec)    else if (isPrefix(str, s)) { \
+      s.erase(0, str.length()); \
+      vec.push_back(s); \
+    }
+    GETIT(Mpq, mpqStr)
+    GETIT(Prefix, prefixStr)
+    GETIT(Suffix, suffixStr)
+#undef GETIT
+  }
+  cerr << "command " << commandStr << endl;
+  cerr << "locale " << localeStr << endl;
+  cerr << "base " << baseStr << endl;
+#define PRINTIT(vec, str) for (it1 = vec.begin(); it1 < vec.end(); it1++) { \
+    cerr << str << *it1 << endl; \
+  }
+  PRINTIT(mpqStr, "MPQ ")
+  PRINTIT(prefixStr, "prefix ")
+  PRINTIT(suffixStr, "suffix ")
+#undef PRINTIT
+  if (baseStr.length() > 0) {
+    baseStr += "\\";
+  }
+  cerr << "Opening base MPQ " << mpqStr[0] << " for reading." << endl;
 
-  result = SFileOpenArchive(argv[baseIndex], 0, MPQ_OPEN_READ_ONLY, &mpqHandle);
+  result = SFileOpenArchive(mpqStr[0].c_str(), 0, MPQ_OPEN_READ_ONLY, &mpqHandle);
+//  result = SFileOpenArchive(argv[baseIndex], 0, MPQ_OPEN_READ_ONLY, &mpqHandle);
 
-  for (int arg = patchIndex; arg < argc && result; arg++) {
-    std::cerr << "Applying patch MPQ " << argv[arg] << "." << std::endl;
-    result = SFileOpenPatchArchive(mpqHandle, argv[arg], argv[localeIndex], MPQ_OPEN_READ_ONLY);
+  for (it1 = ++mpqStr.begin(); it1 < mpqStr.end() && result; it1++) {
+    cerr << "Applying patch MPQ " << *it1 << "." << endl;
+    result = SFileOpenPatchArchive(mpqHandle, it1->c_str(), localeStr.c_str(), MPQ_OPEN_READ_ONLY);
   }
 
-  std::cerr << "File open result: " << (result ? "Success" : "Failure");
+  cerr << "File open result: " << (result ? "Success" : "Failure");
 
   if (!result) {
-    std::cerr << " Error #" << GetLastError() << std::endl;
+    cerr << " Error #" << GetLastError() << endl;
     exit(1);
   }
 
-  std::cerr << std::endl;
+  cerr << endl;
 
-  if (strcmp(argv[commandIndex], "code") == 0) {
+  if (commandStr == "list") {
     long count = 0;
-
-    for (int i = 0; i < prefixCount; i++) {
-      for (int j = 0; j < suffixCount; j++) {
-        strcpy(buffer, prefixes[i]);
-        strcat(buffer, "*");
-        strcat(buffer, suffixes[j]);
-        count += printMPQMatches(mpqHandle, buffer);
+    
+    for (it1 = prefixStr.begin(); it1 < prefixStr.end(); it1++) {
+      for (it2 = suffixStr.begin(); it2 < suffixStr.end(); it2++) {
+        string s = baseStr + *it1 + "\\*" + *it2;
+        cerr << "Searching for " << s << endl;
+        count += printMPQMatches(mpqHandle, s.c_str());
       }
     }
 
-    std::cerr << "Found " << count << " files." << std::endl;
+    cerr << "Found " << count << " files." << endl;
 
   }
+/*
   else if (strcmp(argv[commandIndex], "art") == 0) {
     long count = 0;
     count += printMPQMatches(mpqHandle, art);
-    std::cerr << "Found " << count << " files." << std::endl;
+    cerr << "Found " << count << " files." << endl;
   }
-  else if (strcmp(argv[commandIndex], "extract") == 0) {
+*/
+  else if (commandStr == "extract") {
     char buffer2[bufferSize];
     long extracted = 0;
+    long errors = 0;
+    long exists = 0;
     while (1) {
-      std::cin.getline(buffer, bufferSize, '\t');
-      std::cin.getline(buffer2, bufferSize);
-      if (std::cin.eof()) {
+      cin.getline(buffer, bufferSize, '\t');
+      cin.getline(buffer2, bufferSize);
+      if (cin.eof()) {
         break;
       }
-      std::cerr << "Extracting file '" << buffer << "' to location '" << buffer2 << "'" << std::endl;
-      if (SFileExtractFile(mpqHandle, buffer, buffer2)) {
-        extracted++;
+      if (FileExists(buffer2)) {
+        //cerr << "File '" << buffer2 << "' already exists." << endl;
+        exists++;
       }
       else {
-        std::cerr << "Could not extract file, error #" << GetLastError() << std::endl;
-        exit(2);
+        //cerr << "Extracting file '" << buffer << "' to location '" << buffer2 << "'" << endl;
+        if (SFileExtractFile(mpqHandle, buffer, buffer2)) {
+          extracted++;
+        }
+        else {
+          cerr << "Could not extract file '" << buffer << "', error #" << GetLastError() << endl;
+          errors++;
+          //exit(2);
+        }
       }
     }
-    std::cerr << "Extracted " << extracted << " files." << std::endl;
+    cerr << "Extracted " << extracted << " files, skipping " << exists << " existing files, with " << errors << " errors." << endl;
   }
   SFileCloseArchive(mpqHandle);
   return(0);

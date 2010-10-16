@@ -1,3 +1,3 @@
 @echo on
-extract.exe --data "..\Data" --extract code --out "..\User-Interface-Code"
+extract.exe --data "..\Data" --extract code --out "..\User-Interface-Code" --logfile code.log
 pause
