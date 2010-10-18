@@ -51,4 +51,5 @@ If all goes well, you should have a working set of executables!
 Make sure you've put the correct paths in the Makefile and then type
 
 make install
-make test
+make code
+make art

@@ -35,12 +35,14 @@ TOOLPREFIX = i686-w64-mingw32-
 G++ = $(TOOLPREFIX)g++
 STRIP = $(TOOLPREFIX)strip
 CFLAGS = --static
-#CFLAGS += -O
-CFLAGS += -ggdb
+CFLAGS += -O
+#CFLAGS += -ggdb
 
 BETADIR = /d/Games/World of Warcraft Beta
 PTRDIR = /d/Games/World of Warcraft Public Test
 LIVEDIR = /d/Games/World of Warcraft
+
+INSTALLDIRS = "$(BETADIR)" "$(PTRDIR)" "$(LIVEDIR)"
 
 
 .PHONY: clean realclean stormclean all install code art patch diff
@@ -55,9 +57,9 @@ diff: stormclean
 
 mpq.exe: $(STORMLIB_DLL) mpq.cpp
 	"$(G++)" $(CFLAGS) $^ -o $@
-#	"$(STRIP)" $@
+	"$(STRIP)" $@
 	"$(CYGWIN)/chmod" 0755 $@
-#	"$(CYGWIN)/upx" -9 $@
+	"$(CYGWIN)/upx" -9 $@
 
 extract.exe: extract.pl
 	"$(PERL)" -c $^ && "$(PERL)" "$(PP)" $^ -o $@
@@ -65,7 +67,7 @@ extract.exe: extract.pl
 $(STORMLIB_DLL):
 	cd "$(STORMLIB_DIR)"; make -f "$(STORMLIB_MAKEFILE)"
 	"$(CYGWIN)/chmod" 0755 $@
-#	"$(CYGWIN)/upx" -9 $@
+	"$(CYGWIN)/upx" -9 $@
 
 realclean: clean stormclean
 
@@ -90,12 +92,8 @@ install: $(ZIPFILE)
 	"$(CYGWIN)/unzip" -u -o "$(ZIPFILE)" -d "$(PTRDIR)"
 	"$(CYGWIN)/unzip" -u -o "$(ZIPFILE)" -d "$(LIVEDIR)"
 
-code:
-	cd "$(BETADIR)/$(ARCHIVE)"; $(CONSOLE) /Cextract-code.bat
-	cd "$(PTRDIR)/$(ARCHIVE)"; $(CONSOLE) /Cextract-code.bat
-	cd "$(LIVEDIR)/$(ARCHIVE)"; $(CONSOLE) /Cextract-code.bat
+code: install
+	for i in $(INSTALLDIRS); do cd "$$i/$(ARCHIVE)" && $(CONSOLE) /Cextract-code.bat; done
 
-art:
-	cd "$(BETADIR)/$(ARCHIVE)"; $(CONSOLE) /Cextract-art.bat
-	cd "$(PTRDIR)/$(ARCHIVE)"; $(CONSOLE) /Cextract-art.bat
-	cd "$(LIVEDIR)/$(ARCHIVE)"; $(CONSOLE) /Cextract-art.bat
+art: install
+	for i in $(INSTALLDIRS); do cd "$$i/$(ARCHIVE)" && $(CONSOLE) /Cextract-art.bat; done
