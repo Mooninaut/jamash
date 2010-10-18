@@ -47,6 +47,7 @@ my $mpqProgram = "mpq.exe";
 my $locale = "enUS";
 my $extract; #= "code";
 my $logFileName = "extract.log";
+my $oldWorld = "false";
 
 my $result = GetOptions(
   "datadir=s"   => \$dataDir,
@@ -54,7 +55,8 @@ my $result = GetOptions(
   "mpqprogram=s" => \$mpqProgram,
   "locale=s"    => \$locale,
   "extract=s" => \$extract,
-  "logfile=s" => \$logFileName);
+  "logfile=s" => \$logFileName,
+  "oldworld=s" => \$oldWorld);
 my $artPrefix = "prefix=Interface";
 my $artSuffix = "suffix=.blp";
 my @codePrefixes = map { "prefix=$_" } ("Interface\\FrameXML", "Interface\\AddOns");
@@ -91,41 +93,48 @@ my ($version) = $updates[-1] =~ m/wow-update-(\d+)\.mpq$/i;
 my @updatesOldWorld = grep { m/wow-update-oldworld-\d+\.mpq/i } @MPQNames;
 logPrint("Found Old World update MPQs: @updatesOldWorld\n");
 my $localeMPQ = File::Spec->catfile($dataDir, $locale, "locale-$locale.MPQ");
-my @mpqs = ($localeMPQ, @updates);
+my @mpqs;
+if ($oldWorld eq "false") {
+  @mpqs = ($localeMPQ, @updates);
+}
+else {
+  @mpqs = ($localeMPQ, @updatesOldWorld);
+}
+my $base = '';
 my $first = 1;
 while (@mpqs) {
   my $mpqs = q("mpq=).join(q(" "mpq=), @mpqs).q(");
-  my @paths;
-  my $base = $first ? "" : $locale;
+  my @lines;
   my $commandLine;
   if ($extract eq "code") {
-    $commandLine = "$mpqProgram command=list locale=$locale $mpqs base=$base @codePrefixes @codeSuffixes";
+    $commandLine = qq("$mpqProgram" "command=list" "locale=$locale" "mpq=$mpqs[0]" "base=$base" @codePrefixes @codeSuffixes);
   }
   elsif ($extract eq "art") {
-    $commandLine = "$mpqProgram command=list locale=$locale $mpqs base=$base $artPrefix $artSuffix";
+    $commandLine = qq("$mpqProgram" "command=list" "locale=$locale" "mpq=$mpqs[0]" "base=$base" "$artPrefix" "$artSuffix");
   }
   else {
     die "invalid command\n";
   }
-  logPrint("Executing $commandLine\n");
-  @paths = `$commandLine`;
-  logPrint("Found paths:\n".join('',@paths));
+  logPrint("Executing command: $commandLine\n");
+  @lines = `$commandLine`;
+  logPrint("Found files:\n".join('',@lines));
   my %newDirs;
-  my @newFiles;
-  chomp @paths;
-  foreach my $path (@paths) {
+  my %newFiles;
+  # my @newPaths;
+  my @deletedFiles;
+  chomp @lines;
+  foreach my $line (@lines) {
+    my ($flag, $path) = split(' ', $line, 2);
     my @pieces = split(/\\/, $path);
     shift @pieces if not $first;
-    push @newFiles, [@pieces];
-    my $file = pop(@pieces);
+    $newFiles{$path} =  [@pieces] if $flag eq '+';
+    push @deletedFiles, [@pieces] if $flag eq '-';
+    pop(@pieces);
     my $href = \%newDirs;
     foreach my $piece (@pieces) {
-      if (exists($href->{$piece})) {
-        
-      }
-      else {
+      unless (exists($href->{$piece})) {
         $href->{$piece} = {};
-      }      
+      }
       $href = $href->{$piece};
     }
   }
@@ -142,13 +151,27 @@ while (@mpqs) {
   my $commandString = q(").join(q(" "), $mpqProgram, 'command=extract', "locale=$locale", "base=$base", map{ "mpq=$_" }@mpqs).q(");
   logPrint("Executing command: $commandString\n");
   my $pipe = IO::File->new('|' . $commandString) or die;
-  for (my $i = 0; $i < @paths; $i++) {
-    my $inFile = $paths[$i];
-    my $outFile = File::Spec->catfile($outDir, $version, @{$newFiles[$i]});
+  foreach my $inFile (keys %newFiles) {
+    #my $inFile = $paths[$i];
+    my $outFile = File::Spec->catfile($outDir, $version, @{$newFiles{$inFile}});
+    logPrint("Extracting file: $outFile\n");
     $pipe->print($inFile, "\t", $outFile, $/);
   }
   undef $pipe;
+  foreach my $pieces (@deletedFiles) {
+    my $deletedFile = File::Spec->catfile($outDir, $version, @$pieces);
+    if (-e $deletedFile) {
+      logPrint("Deleting file: $deletedFile\n");
+      unlink($deletedFile);
+    }
+  }
   shift @mpqs; # oh so tricksy -- try each successive mpq for new files
-  $first = 0;
+  # this silliness is needed because the original MPQ stores files in
+  # "Interface\Blah" but the patch MPQs store them in "enUS\Interface\Blah"
+  if ($first) {
+    $first = 0;
+    $base = $locale;
+    $locale = '';
+  }
 }
 undef $logFileHandle;

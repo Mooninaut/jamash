@@ -46,6 +46,8 @@ const string Mpq("mpq=");
 const string Prefix("prefix=");
 const string Suffix("suffix=");
 const string Base("base=");
+const string Debug("debug=");
+const string Verbose("verbose=");
 
 const int bufferSize = 1024;
 /*
@@ -54,7 +56,23 @@ const int localeIndex = 2;
 const int baseIndex = 3;
 const int patchIndex = 4;
 */
-
+DWORD getFileFlags(HANDLE mpq, const char *fileName) {
+  HANDLE file;
+  //cerr << "Checking to see if " << fileName << " is patched." << endl;
+  //bool result = SFileOpenFileEx(mpq, fileName, SFILE_OPEN_PATCHED_FILE, &file);
+  bool result = SFileOpenFileEx(mpq, fileName, SFILE_OPEN_FROM_MPQ, &file);
+  assert(result == true); // FIXME BLAH BLAH
+  DWORD info;
+  result = SFileGetFileInfo(file, SFILE_INFO_FLAGS, &info, sizeof(info));
+  SFileCloseFile(file);
+  return(info);
+}
+bool isPatch(DWORD info) {
+  return(info & MPQ_FILE_PATCH_FILE ? true : false);
+}
+bool isDeleted(DWORD info) {
+  return(info & MPQ_FILE_DELETE_MARKER ? true : false);
+}
 long printMPQMatches(HANDLE mpq, const char *glob) {
   SFILE_FIND_DATA found;
   bool result = false;
@@ -65,12 +83,23 @@ long printMPQMatches(HANDLE mpq, const char *glob) {
   }
   while (result) {
     count++;
-    cout << found.cFileName << endl;
+    DWORD flags = getFileFlags(mpq, found.cFileName);
+    if (isPatch(flags)) {
+      cout << "*"; // patched
+    }
+    else if (isDeleted(flags)) {
+      cout << "-"; // deleted
+    }
+    else {
+      cout << "+"; // new
+    }
+    cout << " " << found.cFileName << endl;
     result = SListFileFindNextFile(listHandle, &found);
   }
   SListFileFindClose(listHandle);
   return count;
 }
+/*
 bool FileExists(const char * fileName) {
   struct stat stFileInfo;
   bool exists;
@@ -94,6 +123,7 @@ bool FileExists(const char * fileName) {
   
   return(exists);
 }
+*/
 // is str1 a prefix of str2?
 bool isPrefix(const string str1, const string str2) {
   return(str2.compare(0, str1.length(), str1) ? false : true);
@@ -114,6 +144,10 @@ int main(int argc, const char *argv[]) {
   string localeStr("enUS");
   string commandStr("list");
   string baseStr("");
+  string debugStr("false");
+  string verboseStr("true");
+  //bool debug;
+  bool verbose;
   vector<string>::iterator it1;
   vector<string>::iterator it2;
   for (int arg = 1; arg < argc; arg++) {
@@ -122,46 +156,57 @@ int main(int argc, const char *argv[]) {
     if (isPrefix(str, s)) { \
       var = s; \
       var.erase(0, str.length()); \
-    }
+    } else
     GETIT(Command, commandStr)
-    else
     GETIT(Locale, localeStr)
-    else
     GETIT(Base, baseStr)
+    //GETIT(Debug, debugStr)
+    GETIT(Verbose, verboseStr)
 #undef GETIT
-#define GETIT(str,vec)    else if (isPrefix(str, s)) { \
+#define GETIT(str,vec) \
+    if (isPrefix(str, s)) { \
       s.erase(0, str.length()); \
       vec.push_back(s); \
-    }
+    } else
     GETIT(Mpq, mpqStr)
     GETIT(Prefix, prefixStr)
     GETIT(Suffix, suffixStr)
+    {}
 #undef GETIT
   }
-  cerr << "command " << commandStr << endl;
-  cerr << "locale " << localeStr << endl;
-  cerr << "base " << baseStr << endl;
-#define PRINTIT(vec, str) for (it1 = vec.begin(); it1 < vec.end(); it1++) { \
+  //debug = debugStr != "false";
+  verbose = verboseStr != "false";
+  if (verbose) {
+    cerr << "command " << commandStr << endl;
+    cerr << "locale " << localeStr << endl;
+    cerr << "base " << baseStr << endl;
+#define PRINTIT(vec, str) \
+  for (it1 = vec.begin(); it1 < vec.end(); it1++) { \
     cerr << str << *it1 << endl; \
   }
-  PRINTIT(mpqStr, "MPQ ")
-  PRINTIT(prefixStr, "prefix ")
-  PRINTIT(suffixStr, "suffix ")
+    PRINTIT(mpqStr, "MPQ ")
+    PRINTIT(prefixStr, "prefix ")
+    PRINTIT(suffixStr, "suffix ")
+  }
 #undef PRINTIT
   if (baseStr.length() > 0) {
     baseStr += "\\";
   }
-  cerr << "Opening base MPQ " << mpqStr[0] << " for reading." << endl;
-
+  if (verbose) {
+    cerr << "Opening base MPQ " << mpqStr[0] << " for reading." << endl;
+  }
   result = SFileOpenArchive(mpqStr[0].c_str(), 0, MPQ_OPEN_READ_ONLY, &mpqHandle);
 //  result = SFileOpenArchive(argv[baseIndex], 0, MPQ_OPEN_READ_ONLY, &mpqHandle);
 
   for (it1 = ++mpqStr.begin(); it1 < mpqStr.end() && result; it1++) {
-    cerr << "Applying patch MPQ " << *it1 << "." << endl;
+    if (verbose) {
+      cerr << "Applying patch MPQ " << *it1 << "." << endl;
+    }
     result = SFileOpenPatchArchive(mpqHandle, it1->c_str(), localeStr.c_str(), MPQ_OPEN_READ_ONLY);
   }
-
-  cerr << "File open result: " << (result ? "Success" : "Failure");
+  if (verbose) {
+    cerr << "File open result: " << (result ? "Success" : "Failure");
+  }
 
   if (!result) {
     cerr << " Error #" << GetLastError() << endl;
@@ -176,12 +221,15 @@ int main(int argc, const char *argv[]) {
     for (it1 = prefixStr.begin(); it1 < prefixStr.end(); it1++) {
       for (it2 = suffixStr.begin(); it2 < suffixStr.end(); it2++) {
         string s = baseStr + *it1 + "\\*" + *it2;
-        cerr << "Searching for " << s << endl;
-        count += printMPQMatches(mpqHandle, s.c_str());
+        if (verbose) {
+          cerr << "Searching for " << s << endl;
+        }
+        count += printMPQMatches(mpqHandle, s.c_str()); // , debug, mpqStr[0].c_str());
       }
     }
-
-    cerr << "Found " << count << " files." << endl;
+    if (verbose) {
+      cerr << "Found " << count << " files." << endl;
+    }
 
   }
 /*
@@ -195,18 +243,20 @@ int main(int argc, const char *argv[]) {
     char buffer2[bufferSize];
     long extracted = 0;
     long errors = 0;
-    long exists = 0;
+    //long exists = 0;
     while (1) {
       cin.getline(buffer, bufferSize, '\t');
       cin.getline(buffer2, bufferSize);
       if (cin.eof()) {
         break;
       }
+      /*
       if (FileExists(buffer2)) {
         //cerr << "File '" << buffer2 << "' already exists." << endl;
         exists++;
       }
       else {
+      */
         //cerr << "Extracting file '" << buffer << "' to location '" << buffer2 << "'" << endl;
         if (SFileExtractFile(mpqHandle, buffer, buffer2)) {
           extracted++;
@@ -216,9 +266,14 @@ int main(int argc, const char *argv[]) {
           errors++;
           //exit(2);
         }
+      /*
       }
+      */
     }
-    cerr << "Extracted " << extracted << " files, skipping " << exists << " existing files, with " << errors << " errors." << endl;
+    //cerr << "Extracted " << extracted << " files, skipping " << exists << " existing files, with " << errors << " errors." << endl;
+    if (verbose) {
+      cerr << "Extracted " << extracted << " files, with " << errors << " errors." << endl;
+    }
   }
   SFileCloseArchive(mpqHandle);
   return(0);

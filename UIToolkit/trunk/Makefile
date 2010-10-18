@@ -11,7 +11,7 @@
 
 # This makefile is intended to be run using MSYS make
 
-VERSION = 1.01
+VERSION = 1.02
 
 CYGWIN=/c/cygwin/bin
 CONSOLE=/bin/cmd
@@ -34,25 +34,30 @@ TOOLPREFIX = i686-w64-mingw32-
 
 G++ = $(TOOLPREFIX)g++
 STRIP = $(TOOLPREFIX)strip
-CFLAGS = --static -O
+CFLAGS = --static
+#CFLAGS += -O
+CFLAGS += -ggdb
 
 BETADIR = /d/Games/World of Warcraft Beta
 PTRDIR = /d/Games/World of Warcraft Public Test
 LIVEDIR = /d/Games/World of Warcraft
 
 
-.PHONY: clean realclean stormclean all install test patch
+.PHONY: clean realclean stormclean all install code art patch diff
 
 all: $(ZIPFILE)
 
 patch: stormlib.diff
-	patch -u -b -p1 -z.prepatch -i stormlib.diff
+	patch -u -b -p1 -i stormlib.diff
+
+diff: stormclean
+	diff -N -a -u -r StormLib.original StormLib > stormlib.diff || true
 
 mpq.exe: $(STORMLIB_DLL) mpq.cpp
 	"$(G++)" $(CFLAGS) $^ -o $@
-	"$(STRIP)" $@
+#	"$(STRIP)" $@
 	"$(CYGWIN)/chmod" 0755 $@
-	"$(CYGWIN)/upx" -9 $@
+#	"$(CYGWIN)/upx" -9 $@
 
 extract.exe: extract.pl
 	"$(PERL)" -c $^ && "$(PERL)" "$(PP)" $^ -o $@
@@ -60,7 +65,7 @@ extract.exe: extract.pl
 $(STORMLIB_DLL):
 	cd "$(STORMLIB_DIR)"; make -f "$(STORMLIB_MAKEFILE)"
 	"$(CYGWIN)/chmod" 0755 $@
-	"$(CYGWIN)/upx" -9 $@
+#	"$(CYGWIN)/upx" -9 $@
 
 realclean: clean stormclean
 
@@ -71,20 +76,19 @@ stormclean:
 	cd "$(STORMLIB_DIR)"; make -f "$(STORMLIB_MAKEFILE)" clean
 
 $(ZIPFILE): $(EXEFILES) $(SRCFILES) $(OTHERFILES)
-	rm -rf "$(ARCHIVE)" "$(ZIPFILE)"
+	rm -f "$(ZIPFILE)"
 	"$(CYGWIN)/chmod" 0755 $(EXEFILES)
 	"$(CYGWIN)/chmod" 0644 $(SRCFILES) $(OTHERFILES)
-	mkdir "$(ARCHIVE)"
-	cp $(EXEFILES) $(OTHERFILES) $(ARCHIVE)
-	mkdir "$(ARCHIVE)/source"
-	cp $(SRCFILES) "$(ARCHIVE)/source"
-	"$(CYGWIN)/zip" -9 -r "$(ZIPFILE)" "$(ARCHIVE)"
+	mkdir -p "$(ARCHIVE)/source"
+	cp -p -u $(EXEFILES) $(OTHERFILES) $(ARCHIVE)
+	cp -p -u $(SRCFILES) "$(ARCHIVE)/source"
+	echo "Jamash's Unofficial Cataclysm UI Toolkit v$(VERSION)" | "$(CYGWIN)/zip" -z -9 -r "$(ZIPFILE)" "$(ARCHIVE)"
 
 install: $(ZIPFILE)
-	rm -rf "$(LIVEDIR)/$(ARCHIVE)/"* "$(BETADIR)/$(ARCHIVE)"/* "$(PTRDIR)/$(ARCHIVE)"/*
-	"$(CYGWIN)/unzip" "$(ZIPFILE)" -d "$(BETADIR)"
-	"$(CYGWIN)/unzip" "$(ZIPFILE)" -d "$(PTRDIR)"
-	"$(CYGWIN)/unzip" "$(ZIPFILE)" -d "$(LIVEDIR)"
+#	rm -rf "$(LIVEDIR)/$(ARCHIVE)/"* "$(BETADIR)/$(ARCHIVE)"/* "$(PTRDIR)/$(ARCHIVE)"/*
+	"$(CYGWIN)/unzip" -u -o "$(ZIPFILE)" -d "$(BETADIR)"
+	"$(CYGWIN)/unzip" -u -o "$(ZIPFILE)" -d "$(PTRDIR)"
+	"$(CYGWIN)/unzip" -u -o "$(ZIPFILE)" -d "$(LIVEDIR)"
 
 code:
 	cd "$(BETADIR)/$(ARCHIVE)"; $(CONSOLE) /Cextract-code.bat

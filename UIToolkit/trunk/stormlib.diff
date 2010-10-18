@@ -1,7 +1,7 @@
-diff -u -r old/StormLib/makefile.w32 new/StormLib/makefile.w32
---- old/StormLib/makefile.w32	2010-10-03 21:19:16 -0400
-+++ new/StormLib/makefile.w32	2010-10-03 21:18:12 -0400
-@@ -8,15 +8,17 @@
+diff -N -a -u -r StormLib.original/makefile.w32 StormLib/makefile.w32
+--- StormLib.original/makefile.w32	2010-09-08 08:20:40 -0400
++++ StormLib/makefile.w32	2010-10-17 18:54:02 -0400
+@@ -8,15 +8,18 @@
  #    
  #####################################################################
  
@@ -14,7 +14,8 @@ diff -u -r old/StormLib/makefile.w32 new/StormLib/makefile.w32
 +#MINGW = x86_64-w64-mingw32-
 +CPP    = $(MINGW)g++
 +CC     = $(MINGW)gcc
-+CFLAGS = -Wall -O
++CFLAGS = -Wall -ggdb
++#-O
  DFLAGS = -D_7ZIP_ST
  LFLAGS = -shared
  #LFLAGS = -lbz2 -lz
@@ -25,7 +26,17 @@ diff -u -r old/StormLib/makefile.w32 new/StormLib/makefile.w32
  
  LIBRARY  = StormLib.dll
  #LIBRARY  = StormLib.lib
-@@ -246,8 +248,8 @@
+@@ -25,7 +28,8 @@
+            src/huffman/huff.o \
+            src/sparse/sparse.o \
+            src/FileStream.o \
+-           src/SCommon.o \
++           src/SBaseCommon.o \
++           src/SBaseFileTable.o \
+            src/SCompression.o \
+            src/SFileAddFile.o \
+            src/SFileAttributes.o \
+@@ -246,8 +250,8 @@
  
  all: $(LIBRARY)
  
@@ -36,3 +47,36 @@ diff -u -r old/StormLib/makefile.w32 new/StormLib/makefile.w32
  
  #install: $(LIBRARY)
  #   install $(LIBRARY) /usr/local/lib
+diff -N -a -u -r StormLib.original/src/SFileExtractFile.cpp StormLib/src/SFileExtractFile.cpp
+--- StormLib.original/src/SFileExtractFile.cpp	2010-09-06 04:19:46 -0400
++++ StormLib/src/SFileExtractFile.cpp	2010-10-18 01:46:08 -0400
+@@ -12,7 +12,7 @@
+ #include "StormLib.h"
+ #include "StormCommon.h"
+ 
+-bool WINAPI SFileExtractFile(HANDLE hMpq, const char * szToExtract, const char * szExtracted)
++bool WINAPI SFileExtractFile(HANDLE hMpq, const char * szToExtract, const char * szExtracted, bool openPatched)
+ {
+     TFileStream * pLocalFile = NULL;
+     HANDLE hMpqFile = NULL;
+@@ -21,7 +21,7 @@
+     // Open the MPQ file
+     if(nError == ERROR_SUCCESS)
+     {
+-        if(!SFileOpenFileEx(hMpq, szToExtract, SFILE_OPEN_FROM_MPQ, &hMpqFile))
++        if(!SFileOpenFileEx(hMpq, szToExtract, (openPatched ? SFILE_OPEN_PATCHED_FILE: SFILE_OPEN_FROM_MPQ), &hMpqFile))
+             nError = GetLastError();
+     }
+ 
+diff -N -a -u -r StormLib.original/src/StormLib.h StormLib/src/StormLib.h
+--- StormLib.original/src/StormLib.h	2010-09-29 15:04:28 -0400
++++ StormLib/src/StormLib.h	2010-10-18 01:39:48 -0400
+@@ -790,7 +790,7 @@
+ bool   WINAPI SFileGetFileInfo(HANDLE hMpqOrFile, DWORD dwInfoType, void * pvFileInfo, DWORD cbFileInfo, LPDWORD pcbLengthNeeded = NULL);
+ 
+ // High-level extract function
+-bool   WINAPI SFileExtractFile(HANDLE hMpq, const char * szToExtract, const char * szExtracted);
++bool   WINAPI SFileExtractFile(HANDLE hMpq, const char * szToExtract, const char * szExtracted, bool openPatched = true);
+ 
+ //-----------------------------------------------------------------------------
+ // Functions for file and archive verification
