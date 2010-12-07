@@ -2,9 +2,6 @@ Learning Aid version 1.11
 Written by Jamash (Kil'jaeden US)
 Email: mooninaut@gmail.com
 
-If you would like to contribute to the development of Learning Aid, please
-visit http://pledgie.com/campaigns/3581
-
 To download the latest version of Learning Aid, please visit either
 http://wow.curse.com/downloads/wow-addons/details/learningaid.aspx
 or
@@ -23,8 +20,8 @@ User Interface Reference
 
 Learning Aid Window
   Left-click and drag the titlebar to move the window.
-  Right-click on the titlebar to bring up the menu.
   Click the close box or middle-click on the titlebar to close the window.
+  Click on the lock icon to lock the window (to prevent it from moving) or unlock it.
 
 Action Buttons
   * Left- or right-click to perform the action.
