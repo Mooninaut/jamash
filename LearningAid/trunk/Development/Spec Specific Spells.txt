@@ -1,0 +1,8 @@
+"Dark Soul: Misery", "" = GetSpellBookItemName(47, BOOKTYPE_SPELL)
+"SPELL", 77801 = GetSpellBookItemInfo(47, BOOKTYPE_SPELL)
+"|cff71d5ff|Hspell:77801|h[Dark Soul]|h|r" = GetSpellLink(77801)
+"|cff71d5ff|Hspell:113860|h[Dark Soul: Misery]|h|r" = GetSpellLink(47,BOOKTYPE_SPELL)
+
+so to get the mapping from a spec-specific spell <--> non-specific spell
+
+name, globalID = LearningAid:UnlinkSpell(GetSpellLink(spellBookID,BOOKTYPE_SPELL))

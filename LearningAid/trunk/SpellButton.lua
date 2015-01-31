@@ -1,9 +1,67 @@
--- SpellButton.lua
+--[[
+
+Learning Aid is copyright © 2008-2015 Jamash (Kil'jaeden US Horde)
+Email: jamashkj@gmail.com
+
+SpellButton.lua is part of Learning Aid.
+
+  Learning Aid is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Lesser General Public License as
+  published by the Free Software Foundation, either version 3 of the
+  License, or (at your option) any later version.
+
+  Learning Aid is distributed in the hope that it will be useful, but
+  WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  Lesser General Public License for more details.
+
+  You should have received a copy of the GNU Lesser General Public
+  License along with Learning Aid.  If not, see
+  <http://www.gnu.org/licenses/>.
+
+To download the latest official version of Learning Aid, please visit 
+either Curse or WowInterface at one of the following URLs: 
+
+http://wow.curse.com/downloads/wow-addons/details/learningaid.aspx
+
+http://www.wowinterface.com/downloads/info10622-LearningAid.html
+
+Other sites that host Learning Aid are not official and may contain 
+outdated or modified versions. If you have obtained Learning Aid from 
+any other source, I strongly encourage you to use Curse or WoWInterface 
+for updates in the future. 
+
+]]
 
 local addonName, private = ...
 local LA = private.LA
-
+local function hideButton(spellButton, mouseButton, down)
+  if not InCombatLockdown() then
+    LA:ClearButtonIndex(spellButton.index)
+  end
+end
+local function linkSpell(spellButton, ...)
+  if "SPELL" == spellButton.item.Status then
+    LA:SpellButton_OnModifiedClick(spellButton, ...)
+  end
+end
+local function toggleIgnore(spellButton, mouseButton, down)
+  if "SPELL" == spellButton.item.Status then
+    LA:ToggleIgnore(spellButton.item)
+    LA:UpdateButton(spellButton)
+  end
+end
+local function toggleFlyout(spellButton, mouseButton, down)
+  if not InCombatLockdown() then
+  -- SpellFlyout:Toggle(flyoutID, parent, direction, distance, isActionBar, specID, showFullTooltip)
+    SpellFlyout:Toggle(spellButton.item.ID, spellButton, "LEFT", 1, false);
+    SpellFlyout:SetBorderColor(181/256, 162/256, 90/256);
+  end
+end
 function LA:CreateButton()
+  --[[ if self.state.retalenting then -- DEBUG FIXME
+    print("CreateButton called during retalenting!") -- DEBUG FIXME
+  end ]]-- DEBUG FIXME
   local buttons = self.buttons
   local count = #buttons
   -- button global variable names start with "SpellButton" to work around an
@@ -16,45 +74,33 @@ function LA:CreateButton()
   subSpellName:SetTextColor(NORMAL_FONT_COLOR.r - 0.1, NORMAL_FONT_COLOR.g - 0.1, NORMAL_FONT_COLOR.b - 0.1)
   buttons[count + 1] = button
   button.index = count + 1
-  button:SetAttribute("type*", "spell")
   button:SetAttribute("type3", "hideButton")
   button:SetAttribute("alt-type*", "hideButton")
   button:SetAttribute("shift-type1", "linkSpell")
   button:SetAttribute("ctrl-type*", "toggleIgnore")
-  button.hideButton = function(spellButton, mouseButton, down)
-    if not self.inCombat then
-      self:ClearButtonIndex(spellButton.index)
-    end
-  end
-  button.linkSpell = function (...) self:SpellButton_OnModifiedClick(...) end
-  button.toggleIgnore = function(spellButton, mouseButton, down)
-    if spellButton.kind == BOOKTYPE_SPELL then
-      self:ToggleIgnore(spellButton.spellName:GetText())
-      self:UpdateButton(spellButton)
-    end
-  end
+  button.hideButton = hideButton
+  button.linkSpell = linkSpell
+  button.toggleIgnore = toggleIgnore
+  button.toggleFlyout = toggleFlyout
   button.iconTexture = _G[name.."IconTexture"]
   button.cooldown = _G[name.."Cooldown"]
   button.spellName = _G[name.."SpellName"]
-  button.subSpellName = _G[name.."SubSpellName"]
+  button.subSpellName = subSpellName
   return button
 end
-function LA:AddButton(kind, id)
-  if kind == BOOKTYPE_SPELL then
-    if id > self.numSpells or id < 1 then
-      self:DebugPrint("AddButton(): Invalid spell ID", id)
-      return
-    end
-  elseif kind == "MOUNT" or kind == "CRITTER" then
-    if id < 1 or id > GetNumCompanions(kind) then
-      self:DebugPrint("AddButton(): Invalid companion, type", kind, "ID", id)
-      return
-    end
-  end
+function LA:AddButton(item)
+  assert(item)
+  --[[ if self.state.retalenting then -- DEBUG FIXME
+    print("AddButton called during retalenting!") -- DEBUG FIXME
+  end ]]-- DEBUG FIXME
+  -- print("AddButton: "..item.Name) -- DEBUG FIXME
+  -- local thing = self.Spell.Global[id] -- could be spell or flyout
+  local itemType = strlower(item.Status) -- SPELL or FLYOUT
+  assert("spell" == itemType or "flyout" == itemType, "Attempt to add invalid item "..item.ID.." of type "..itemType)
   local buttons = self.buttons
   local visible = self:GetVisible()
   for i = 1, visible do
-    if buttons[i].kind == kind and buttons[i]:GetID() == id then
+    if buttons[i].item == item then -- already exists, no action needed
       return
     end
   end
@@ -62,53 +108,53 @@ function LA:AddButton(kind, id)
   -- if bar is full
   if visible == #buttons then
     button = self:CreateButton()
-    self:DebugPrint("Adding button id "..id.." index "..button.index)
+    self:DebugPrint("Adding "..item.Status.." button with id "..item.ID.." to index "..button.index)
   else
   -- if bar has free buttons
     button = buttons[self:GetVisible() + 1]
-    self:DebugPrint("Changing button index "..(self:GetVisible() + 1).." from id "..button:GetID().." to "..id)
+    self:DebugPrint("Changing button index "..(self:GetVisible() + 1).." from "..button.item.Status.." "..button.item.ID.." to "..item.Status.." "..item.ID)
     button:Show()
   end
-
-  button.kind = kind
+  
+  button.item = item
+  button:SetAttribute("spell*", item.ID)
+  
+  if "flyout" == itemType then
+    button:SetAttribute("flyout*", item.ID)
+    button:SetAttribute("type*", "toggleFlyout")
+  else
+    button:SetAttribute("type*", itemType)
+  end
+  
   self:SetVisible(visible + 1)
-  button:SetID(id)
   button:SetChecked(false)
   
-  if kind == BOOKTYPE_SPELL then
-    -- if id > 1 then
-    --   local name, subName = GetSpellBookItemName(id, kind)
-    --   local prevName, prevSubName = GetSpellBookItemName(id - 1, kind)
-      -- CATA -- if name == prevName then
-      --   self:DebugPrint("Found new rank of existing ability "..name.." "..prevRank)
-      --   self:ClearButtonID(kind, id - 1)
-      -- else
-      --   self:DebugPrint(name.." ~= "..prevName)
-      -- end
-    -- end
-    if IsSelectedSpellBookItem(id, kind) then
-      button:SetChecked(true)
-    end
+  if "spell" == itemType and item.Selected then
+    button:SetChecked(true)
+  end
+  --[[ MOP
   elseif kind == "MOUNT" or kind == "CRITTER" then
     -- button.Companion = name
     local creatureID, creatureName, creatureSpellID, icon, isSummoned = GetCompanionInfo(kind, id)
     if isSummoned then
       button:SetChecked(true)
     end
+
   else
     self:DebugPrint("AddButton(): Invalid button type "..kind)
   end
+  ]]
   self:UpdateButton(button)
   self:AutoSetMaxHeight()
   self.frame:Show()
 end
-function LA:ClearButtonID(kind, id)
+function LA:ClearButtonID(item)
   local buttons = self.buttons
   local i = 1
   -- not using a for loop because self.visible may change during the loop execution
   while i <= self:GetVisible() do
-    if buttons[i].kind == kind and buttons[i]:GetID() == id then
-      self:DebugPrint("Clearing button "..i.." with ID "..buttons[i]:GetID())
+    if buttons[i].item == item then -- buttons[i].kind == kind and 
+      self:DebugPrint("Clearing button "..i.." with item "..buttons[i].item.Name)
       self:ClearButtonIndex(i)
     else
       --self:DebugPrint("Button "..i.." has id "..buttons[i]:GetID().." which does not match "..id)
@@ -176,9 +222,9 @@ function LA:ClearButtonIndex(index)
   for i = index, visible - 1 do
     local button = buttons[i]
     local nextButton = buttons[i + 1]
-    button:SetID(nextButton:GetID())
+    button.item = nextButton.item
+    button:SetAttribute("type*", nextButton:GetAttribute("type*"))
     button:SetChecked(nextButton:GetChecked())
-    button.kind = nextButton.kind
     button.iconTexture:SetVertexColor(nextButton.iconTexture:GetVertexColor())
     local cooldown = button.cooldown
     local nextCooldown = nextButton.cooldown
@@ -213,8 +259,7 @@ function LA:GetVisible()
   return self.visible
 end
 function LA:Hide()
-  local frame = self.frame
-  if not self.inCombat then
+  if not InCombatLockdown() then
     for i = 1, self:GetVisible() do
       self.buttons[i]:SetChecked(false)
       self.buttons[i]:Hide()
@@ -227,9 +272,10 @@ end
 
 -- Adapted from SpellBookFrame.lua
 function LA:UpdateButton(button)
-  local id = button:GetID();
-
+  --local id = button:GetID()
+  local item = button.item
   local name = button:GetName()
+  local id = item.ID
   local iconTexture = _G[name.."IconTexture"]
   local spellString = _G[name.."SpellName"]
   local subSpellString = _G[name.."SubSpellName"]
@@ -237,30 +283,35 @@ function LA:UpdateButton(button)
   local autoCastableTexture = _G[name.."AutoCastable"]
   local highlightTexture = _G[name.."Highlight"]
   -- CATA -- local normalTexture = _G[name.."NormalTexture"]
-  if not self.inCombat then
+  if not InCombatLockdown() then
     button:Enable()
   end
 
-  if button.kind == BOOKTYPE_SPELL then
 
-    local texture = GetSpellTexture(id, BOOKTYPE_SPELL);
+  local texture = GetSpellBookItemTexture(item.Slot, BOOKTYPE_SPELL);
 
-    -- If no spell, hide everything and return
-    if ( not texture or (strlen(texture) == 0) ) then
-      iconTexture:Hide()
-      spellString:Hide()
-      subSpellString:Hide()
-      cooldown:Hide()
-      autoCastableTexture:Hide()
-      SpellBook_ReleaseAutoCastShine(button.shine)
-      button.shine = nil
-      highlightTexture:SetTexture("Interface\\Buttons\\ButtonHilight-Square")
-      button:SetChecked(0)
-      -- CATA -- normalTexture:SetVertexColor(1.0, 1.0, 1.0)
-      return;
-    end
+  -- If no spell, hide everything and return
+  if ( not texture or (strlen(texture) == 0) ) then
+    iconTexture:Hide()
+    spellString:Hide()
+    subSpellString:Hide()
+    cooldown:Hide()
+    autoCastableTexture:Hide()
+    SpellBook_ReleaseAutoCastShine(button.shine)
+    button.shine = nil
+    highlightTexture:SetTexture("Interface\\Buttons\\ButtonHilight-Square")
+    button:SetChecked(false)
+    -- CATA -- normalTexture:SetVertexColor(1.0, 1.0, 1.0)
+    return;
+  end
 
-    local start, duration, enable = GetSpellCooldown(id, BOOKTYPE_SPELL)
+  local spellName = item.Name
+  local subSpellName = item.SubName
+
+  if "SPELL" == item.Status then
+    spellName = item.SpecName
+    subSpellName = item.SpecSubName
+    local start, duration, enable = GetSpellCooldown(id)
     CooldownFrame_SetTimer(cooldown, start, duration, enable)
     cooldown.start = start
     cooldown.duration = duration
@@ -270,143 +321,89 @@ function LA:UpdateButton(button)
     else
       iconTexture:SetVertexColor(0.4, 0.4, 0.4)
     end
+  end
+  
+  -- MOP -- local globalID = select(2, GetSpellBookItemInfo(id, BOOKTYPE_SPELL))
 
-    local spellName, subSpellName = GetSpellBookItemName(id, BOOKTYPE_SPELL)
+  -- CATA -- normalTexture:SetVertexColor(1.0, 1.0, 1.0)
+  highlightTexture:SetTexture("Interface\\Buttons\\ButtonHilight-Square")
+  spellString:SetTextColor(NORMAL_FONT_COLOR.r, NORMAL_FONT_COLOR.g, NORMAL_FONT_COLOR.b)
 
-    -- CATA -- normalTexture:SetVertexColor(1.0, 1.0, 1.0)
-    highlightTexture:SetTexture("Interface\\Buttons\\ButtonHilight-Square")
-    spellString:SetTextColor(NORMAL_FONT_COLOR.r, NORMAL_FONT_COLOR.g, NORMAL_FONT_COLOR.b)
+  --Set Secure Action Button attribute
+  --if not InCombatLockdown()then
+  --  local itemType = strlower(item.Status)
+  --  button:SetAttribute(itemType.."*", id) -- spell* or flyout*
+  --end
 
-    -- Set Secure Action Button attribute
-    if not self.inCombat then
-      button:SetAttribute("spell*", spellName)
-    end
-
-    iconTexture:SetTexture(texture)
-    spellString:SetText(spellName)
-    subSpellString:SetText(subSpellName)
-    if ( subSpellName ~= "" ) then
-      spellString:SetPoint("LEFT", button, "RIGHT", 4, 4)
-    else
-      spellString:SetPoint("LEFT", button, "RIGHT", 4, 2)
-    end
-    if self.saved.ignore[self.localClass] and
-       self.saved.ignore[self.localClass][string.lower(spellName)] then
-      iconTexture:SetVertexColor(0.8, 0.1, 0.1) -- cribbed from Bartender4
-    end
-  elseif button.kind == "MOUNT" or button.kind == "CRITTER" then
-
-    -- Some companions have two names, the display name and the spell name
-    -- Make sure to use the spell name for casting
-    local creatureID, creatureName, creatureSpellID, icon, isSummoned = GetCompanionInfo(button.kind, id)
-    local spellName = GetSpellInfo(creatureSpellID)
-    iconTexture:SetTexture(icon)
-    spellString:SetText(creatureName)
-    subSpellString:SetText("")
-    if not self.inCombat then
-      button:SetAttribute("spell*", spellName)
-    end
+  iconTexture:SetTexture(texture)
+  spellString:SetText(spellName)
+  subSpellString:SetText(spellSubName)
+  if ( spellSubName ~= "" ) then
+    spellString:SetPoint("LEFT", button, "RIGHT", 4, 4)
+  else
+    spellString:SetPoint("LEFT", button, "RIGHT", 4, 2)
+  end
+  if self:IsIgnored(item) then
+    iconTexture:SetVertexColor(0.8, 0.1, 0.1) -- red color cribbed from Bartender4
   end
   iconTexture:Show()
   spellString:Show()
   subSpellString:Show()
   --SpellButton_UpdateSelection(self)
 end
--- Adapted from SpellBookFrame.lua
 function LA:SpellButton_OnDrag(button)
-  local id = button:GetID()
-  if button.kind == BOOKTYPE_SPELL then
-    PickupSpellBookItem(id, button.kind)
-  elseif button.kind == "MOUNT" or button.kind == "CRITTER" then
-    PickupCompanion(button.kind, id)
+  if not InCombatLockdown() then
+    button.item:Pickup()
   end
+end
+function LA._SpellButton_OnEnter(button)
+  LA:SpellButton_OnEnter(button)
 end
 -- Adapted from SpellBookFrame.lua
 function LA:SpellButton_OnEnter(button)
-  --self:DebugPrint("Outer SpellButton_OnEnter")
-  local id = button:GetID()
-  local kind = button.kind
   GameTooltip:SetOwner(button, "ANCHOR_RIGHT")
-  if kind == BOOKTYPE_SPELL then
-    if GameTooltip:SetSpellBookItem(id, BOOKTYPE_SPELL) then
-      button.UpdateTooltip = function (...)
-        --self:DebugPrint("Inner SpellButton_OnEnter")
-        self:SpellButton_OnEnter(...)
-      end
+    if GameTooltip:SetSpellBookItem(button.item.Slot, BOOKTYPE_SPELL) then
+      button.UpdateTooltip = LA._SpellButton_OnEnter
     else
       button.UpdateTooltip = nil
     end
     GameTooltip:AddLine("dummy")
     _G["GameTooltipTextLeft"..GameTooltip:NumLines()]:SetText(self:GetText("ctrlToIgnore"))
     GameTooltip:Show()
-  elseif kind == "MOUNT" or kind == "CRITTER" then
-    local creatureID, creatureName, creatureSpellID, icon, isSummoned = GetCompanionInfo(kind, id)
-    if GameTooltip:SetHyperlink("spell:"..creatureSpellID) then
-      button.UpdateTooltip = function (...) self:SpellButton_OnEnter(...) end
-    else
-      button.UpdateTooltip = nil
-    end
-  else
-    self:DebugPrint("Invalid button type in LearningAid:SpellButton_OnEnter: "..button.kind)
-  end
 end
 -- Adapted from SpellBookFrame.lua
 function LA:SpellButton_UpdateSelection(button)
-  if button.kind == BOOKTYPE_SPELL then
-    local id = button:GetID()
-    if IsSelectedSpellBookItem(id, BOOKTYPE_SPELL) then
-      button:SetChecked("true")
-    else
-      button:SetChecked("false")
-    end
+  if IsSelectedSpellBookItem(button.item.Slot, "BOOKTYPE_SPELL") then
+    button:SetChecked(true)
+  else
+    button:SetChecked(false)
   end
 end
--- Adapted from SpellBookFrame.lua
+-- Adapted from SpellBookFrame.lua and heavily modified
 function LA:SpellButton_OnModifiedClick(spellButton, mouseButton)
-  local id = spellButton:GetID()
-  local spellName, subSpellName
-  if spellButton.kind == BOOKTYPE_SPELL then
-    if ( id > MAX_SPELLS ) then
-      return;
-    end
-    if ( IsModifiedClick("CHATLINK") ) then
-      if ( MacroFrame and MacroFrame:IsShown() ) then
-        spellName, subSpellName = GetSpellBookItemName(id, BOOKTYPE_SPELL)
-          if ( spellName and not IsPassiveSpell(id, BOOKTYPE_SPELL) ) then
-            if ( subSpellName and (strlen(subSpellName) > 0) ) then
-              ChatEdit_InsertLink(spellName.."("..subSpellName..")")
-            else
-              ChatEdit_InsertLink(spellName)
-            end
-          end
-        return;
-      else
-        local spellLink = GetSpellLink(id, BOOKTYPE_SPELL)
-          if(spellLink) then
-            ChatEdit_InsertLink(spellLink)
-          end
-        return;
+  local item = spellButton.item
+  local itemName = item.SpecName
+  local itemSubName = item.SpecSubName
+  if IsModifiedClick("CHATLINK") and "SPELL" == spellButton.item.Status then
+    if MacroFrame and MacroFrame:IsShown() then
+      if not item.Passive then
+        if strlen(itemSubName) > 0 then
+          ChatEdit_InsertLink(itemName.."("..itemSubName..")")
+        else
+          ChatEdit_InsertLink(itemName)
+        end
+      end
+    else
+      local link = item.SpecLink
+      if link then
+        ChatEdit_InsertLink(link)
       end
     end
-    if ( IsModifiedClick("PICKUPACTION") ) then
-      PickupSpell(id, BOOKTYPE_SPELL)
-      return;
-    end
-  elseif spellButton.kind == "MOUNT" or spellButton.kind == "CRITTER" then
-    local creatureID, creatureName, creatureSpellID, icon, isSummoned = GetCompanionInfo(spellButton.kind, id)
-    if ( IsModifiedClick("CHATLINK") ) then
-      if ( MacroFrame and MacroFrame:IsShown() ) then
-        local spellName = GetSpellInfo(creatureSpellID)
-        ChatEdit_InsertLink(spellName)
-      else
-        local spellLink = GetSpellLink(creatureSpellID)
-        ChatEdit_InsertLink(spellLink)
-      end
-    elseif ( IsModifiedClick("PICKUPACTION") ) then
-      self.SpellButton_OnDrag(spellButton)
-    end
+  elseif IsModifiedClick("PICKUPACTION") then
+    item:Pickup()
   end
 end
+
 function LA:SpellButton_OnHide(button)
   self:DebugPrint("Hiding button "..button.index)
   button:SetChecked(false)

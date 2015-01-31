@@ -7,10 +7,8 @@ function LA:UpdateCompanions()
   if not self.companionCache then self.companionCache = {} end
   local mount = self:UpdateCompanionType("MOUNT")
   local critter = self:UpdateCompanionType("CRITTER")
-  if (mount > 0) or (critter > 0) then
+  if (mount > 0) or (critter > 0) and not self.companionsReady then
     self.companionsReady = true
-  else
-    self.companionsReady = false
   end
   return self.companionsReady
 end
@@ -42,7 +40,7 @@ function LA:DiffCompanions()
   self:DiffCompanionType("CRITTER")
 end
 function LA:AddCompanion(kind, id)
-  if self.inCombat then
+  if InCombatLockdown() then
     table.insert(self.queue, { action = "LEARN", id = id, kind = kind})
   else
     self:LearnSpell(kind, id)

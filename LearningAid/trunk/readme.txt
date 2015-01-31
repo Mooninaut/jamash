@@ -1,20 +1,48 @@
-Learning Aid version 1.11
-Written by Jamash (Kil'jaeden US)
-Email: mooninaut@gmail.com
+Learning Aid version 1.12 Beta 1
+Compatible with World of Warcraft version 6.0.3
+Learning Aid is copyright © 2008-2015 Jamash (Kil'jaeden US Horde)
+Email: jamash.kj@gmail.com
 
-To download the latest version of Learning Aid, please visit either
+=== BEGIN LEGAL BOILERPLATE ===
+
+This file is part of Learning Aid.
+
+  Learning Aid is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Lesser General Public License as
+  published by the Free Software Foundation, either version 3 of the
+  License, or (at your option) any later version.
+
+  Learning Aid is distributed in the hope that it will be useful, but
+  WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  Lesser General Public License for more details.
+
+  You should have received a copy of the GNU Lesser General Public
+  License along with Learning Aid.  If not, see
+  <http://www.gnu.org/licenses/>.
+
+To download the latest official version of Learning Aid, please visit 
+either Curse or WowInterface at one of the following URLs: 
+
 http://wow.curse.com/downloads/wow-addons/details/learningaid.aspx
-or
+
 http://www.wowinterface.com/downloads/info10622-LearningAid.html
 
-Learning Aid helps you put new spells, abilities, tradeskills, mounts and
-minipets on your action bars or in your macros when you learn them, without
-having to page through your Spellbook or Pets tab.  When you learn something
-new, Learning Aid pops up a window with an icon for the newly learned action.
-You may then drag the icon to your action bar, or use it to paste a link into
-chat or text into a macro.  You can also use the new action directly by
-clicking on the icon.  When you're done, you can easily dismiss the window.
+Other sites that host Learning Aid are not official and may contain 
+outdated or modified versions. If you have obtained Learning Aid from 
+any other source, I strongly encourage you to use Curse or WoWInterface 
+for updates in the future. 
 
+=== END LEGAL BOILERPLATE ===
+
+ Learning Aid helps you put new spells, abilities, and tradeskills on 
+your action bars or in your macros when you learn them, without having 
+to waste time paging through your Spellbook. When you learn something 
+new, Learning Aid pops up a window with an icon for the newly learned 
+action. You may then drag the icon to your action bar, or use it to 
+paste a link into chat or text into a macro. You can also use the new 
+action directly by clicking on the icon. When you're done, you can 
+easily dismiss the window. 
 
 User Interface Reference
 
@@ -25,12 +53,9 @@ Learning Aid Window
 
 Action Buttons
   * Left- or right-click to perform the action.
-  * Middle-click to dismiss a button.  Dismissing the only button closes the
-  window.
-  * Shift-click on a button to create a chat link or paste the ability name into
-  the macro window.
-  * Ctrl-click on a button to ignore the spell on it when searching for missing
-  actions.
+  * Middle-click to dismiss a button.  Dismissing the only button closes the window.
+  * Shift-click on a button to create a chat link or paste the ability name into the macro window.
+  * Ctrl-click on a button to ignore the spell on it when searching for missing actions.
 
 Slash Command Reference
 
@@ -109,12 +134,7 @@ Slash Commands
 
 Advanced Slash Commands
 
-/la debug
-  Turn debugging output on or off.
-
-/la test
-  /la test add TYPE INDEX [INDEX ...]
-  /la test remove TYPE INDEX
-    TYPE is "spell", "mount" or "critter".
-    INDEX is the number of the spell, mount or minipet you wish to add or
-    remove, counting from 1.
+/la advanced framestrata [TOOLTIP|BACKGROUND|MEDIUM|HIGH|DIALOG|FULLSCREEN_DIALOG|LOW|FULLSCREEN]
+  Set the frame strata of the Learning Aid window. Only necessary if you 
+ are having problems with the Learning Aid window interacting poorly with 
+ other windows. 

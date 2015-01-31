@@ -1,0 +1,37 @@
+1x LearningAid-1.11.2\Spell.lua:244: attempt to concatenate field 'name' (a nil value)
+LearningAid-1.11.2\Debug.lua:118: in function `DiffSpellBook'
+LearningAid-1.11.2\Events.lua:172: in function <LearningAid\Events.lua:166>
+LearningAid-1.11.2\Debug.lua:118: in function `?'
+LearningAid-1.11.2\LearningAid.lua:120: in function <LearningAid\LearningAid.lua:119>
+
+Locals:
+count = 43
+(*temporary) = <function> @ LearningAid\Debug.lua:105:
+(*temporary) = <table> {
+}
+self = <table> {
+ shadow = <table> {}
+ debug = 2
+ spellSpamFilter = <function> @ LearningAid\LearningAid.lua:606:
+ tokenCount = <table> {}
+ debugLimit = 5000
+ debugFlags = <table> {}
+ onEvent = <function> @ LearningAid\LearningAid.lua:119:
+ debugCount = 3395
+ DebugPrint = <function> @ LearningAid\Debug.lua:68:
+ Wrap = <function> @ LearningAid\Debug.lua:113:
+ meta = <table> {}
+ onEventDebug = <function> @ LearningAid\LearningAid.lua:123:
+ LA = <table> {}
+ noLog = <table> {}
+ wrappers = <table> {}
+}
+name = "DiffSpellBook"
+LA = <table> {
+}
+tset = <function> @ LearningAid\Debug.lua:105:
+junk = <table> {
+}
+f = <function> @ LearningAid\Spell.lua:220:
+
+  ---

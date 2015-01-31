@@ -1,4 +1,37 @@
--- Trainer.lua
+--[[
+
+Learning Aid is copyright © 2008-2015 Jamash (Kil'jaeden US Horde)
+Email: jamashkj@gmail.com
+
+Trainer.lua is part of Learning Aid.
+
+  Learning Aid is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Lesser General Public License as
+  published by the Free Software Foundation, either version 3 of the
+  License, or (at your option) any later version.
+
+  Learning Aid is distributed in the hope that it will be useful, but
+  WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  Lesser General Public License for more details.
+
+  You should have received a copy of the GNU Lesser General Public
+  License along with Learning Aid.  If not, see
+  <http://www.gnu.org/licenses/>.
+
+To download the latest official version of Learning Aid, please visit 
+either Curse or WowInterface at one of the following URLs: 
+
+http://wow.curse.com/downloads/wow-addons/details/learningaid.aspx
+
+http://www.wowinterface.com/downloads/info10622-LearningAid.html
+
+Other sites that host Learning Aid are not official and may contain 
+outdated or modified versions. If you have obtained Learning Aid from 
+any other source, I strongly encourage you to use Curse or WoWInterface 
+for updates in the future. 
+
+]]
 
 local addonName, private = ...
 local LA = private.LA
@@ -31,8 +64,7 @@ function LA:CreateTrainAllButton()
        hideOnEscape = 1,
        whileDead = false
     }
-    self.ClassTrainerFrame_Update = ClassTrainerFrame_Update
-    ClassTrainerFrame_Update = function(...) self:ClassTrainerFrame_Update(...); self:GetAvailableTrainerServices() end
+    hooksecurefunc("ClassTrainerFrame_Update", function() LearningAid:GetAvailableTrainerServices() end)
     return button
   end
 end
